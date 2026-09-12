@@ -5,6 +5,10 @@
 
 This GitHub repository contains the source codes and files used in the development of Group 2's Final Project for CPE-009B.
 
+## Description
+
+Project: Simple Chat Application (username, chat threading w/ email)
+
 ## Members
 
 * THOMAS JOSEPH ASTUDILLO
