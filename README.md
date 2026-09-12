@@ -7,7 +7,7 @@ This GitHub repository contains the source codes and files used in the developme
 
 ## ℹ️ Description
 
-Project: Simple Chat Application (username, chat threading w/ email)
+Project: **Simple Chat Application (username, chat threading w/ email)**
 
 ## 🚹 Members
 
