@@ -35,3 +35,18 @@ Statement & Made By: Silao
 
 (END)
 ======================================================
+
+ASTUDILLO PROGRESS
+
+[Posted Date (October 12, 2026) | Time (7:58 pm)]
+
+- Imported MainChatroom.py (Very Barebones at the moment, only includes the chat system itself, a sidebar for the users you can chat to (not implemented), and 300 Word limit)
+- Started Documentation of MainChatroom.py
+- Slightly Modified MenuInterface.py to connect MainChatroom.py upon successful log-in
+- Currently working on the Menu Graphics Design ( Attempting )
+
+Statement & Made By: Astudillo
+
+(END)
+======================================================
+
