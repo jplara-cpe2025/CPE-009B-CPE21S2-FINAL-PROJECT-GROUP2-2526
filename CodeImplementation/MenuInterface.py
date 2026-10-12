@@ -7,7 +7,8 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 )
 from PyQt6.QtGui import QIcon, QMovie
-from Account_Registration import RegistrationApp
+from AccountRegistration import RegistrationApp
+from MainChatroom import Main_Chatroom
 
 CSV_FILE = "accounts.csv"
 
@@ -95,6 +96,11 @@ class App(QWidget):
             QMessageBox.information(self, "Menu Interface", f"Login Successful!\nWelcome to the Menu, {username}!")
             self.textbox.clear()
             self.password.clear()
+
+            self.chat_window = Main_Chatroom(username)
+            self.chat_window.show()
+
+            self.close()
         else:
             QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
 
@@ -106,3 +112,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = App()
     sys.exit(app.exec())
+
