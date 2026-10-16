@@ -9,8 +9,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon, QMovie
 from AccountRegistration import RegistrationApp
 from MainChatroom import Main_Chatroom
+from database import create_tables,get_user,get_all_users
 
-CSV_FILE = "accounts.csv"
 
 class App(QWidget):
 
@@ -75,29 +75,19 @@ class App(QWidget):
             QMessageBox.warning(self, "Login Error", "Please enter both username and password.")
             return
 
-        if not os.path.exists(CSV_FILE):
+        users = get_all_users()
+        if not users:
             QMessageBox.critical(self, "Error", "No registered accounts found. Please register first.")
             return
+        
+        user = get_user(username)
 
-        # Check credentials in CSV
-        login_successful = False
-        try:
-            with open(CSV_FILE, mode='r', encoding='utf-8') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    if row.get('Username') == username and row.get('Password') == password:
-                        login_successful = True
-                        break
-        except Exception as e:
-            QMessageBox.critical(self, "File Error", f"Could not read accounts file: {str(e)}")
-            return
-
-        if login_successful:
+        if user and user[2] == password:
             QMessageBox.information(self, "Menu Interface", f"Login Successful!\nWelcome to the Menu, {username}!")
             self.textbox.clear()
             self.password.clear()
 
-            self.chat_window = Main_Chatroom(username)
+            self.chat_window = Main_Chatroom(user_id=user[0],username=username)
             self.chat_window.show()
 
             self.close()
@@ -109,7 +99,8 @@ class App(QWidget):
         self.reg_window.show()
 
 if __name__ == '__main__':
+    create_tables()
+
     app = QApplication(sys.argv)
     ex = App()
     sys.exit(app.exec())
-
