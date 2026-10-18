@@ -60,6 +60,13 @@ BANDIGAN PROGRESS
 - Created functions to create and retrieve users
 - Created functions to save messages into the database
 
+[Posted Date (October/17/26) | Time (2:00 AM)]
+
+- Connected Account Registration to the database
+- Connected Main Chat Room to the database
+- Connected Menu Interface to the database
+- Created funcction to retrieve messages and all users from the database
+
 Statement & Made By: BANDIGAN
 
 (END)
