@@ -4,22 +4,26 @@ import csv
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
-                             QMainWindow, QVBoxLayout, QHBoxLayout, QTextEdit, QListWidget)
+                             QMainWindow, QVBoxLayout, QHBoxLayout, QTextEdit, QListWidget, QListWidgetItem)
 
 from AccountRegistration import RegistrationApp
+from database import save_message, get_all_users, get_messages
 
 CSV_file = "accounts.csv"
 
 class Main_Chatroom(QMainWindow):
-    def __init__(self, username = 'Guest'):
+    def __init__(self, user_id, username = 'Guest'):
         super().__init__()
         self.username = username
+        self.user_id = user_id 
+        self.receiver_id = None
         self.title = f"Chatroom - Logged in as: {self.username}"
         self.x = 200
         self.y = 200
         self.width = 750
         self.height = 450
         self.initUI()
+        self.load_contacts()
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -36,6 +40,7 @@ class Main_Chatroom(QMainWindow):
         self.user_chats.addWidget(self.chats_display)
 
         self.contacts = QListWidget()
+        self.contacts.itemClicked.connect(self.select_contacts)
         self.user_chats.addWidget(self.contacts)
 
         contacts_list = QWidget()
@@ -74,12 +79,48 @@ class Main_Chatroom(QMainWindow):
 
         self.show()
 
+    def load_contacts(self):
+        self.contacts.clear()
+
+        for user_id, username in get_all_users():
+            if user_id == self.user_id:
+                continue
+            item = QListWidgetItem(username)
+            item.setData(Qt.ItemDataRole.UserRole,user_id)
+            self.contacts.addItem(item)
+
+    def select_contacts(self,item):
+        self.receiver_id = item.data(Qt.ItemDataRole.UserRole)
+
+        self.chat_display.clear()
+
+        for msg in get_messages(self.user_id, self.receiver_id):
+            message_id, sender_id, receiver_id, message, timestamp = msg
+
+            sender=(
+                self.username
+                if sender_id == self.user_id
+                else item.text()
+            )
+
+            self.chat_display.append(
+                f"<b>{sender}:</b> {message} <small>{timestamp}</small>"
+            )
+
     def send_message(self):
         message = self.text_input.text().strip()
 
-        if message:
-            self.chat_display.append(f"<b>{self.username}:</b> {message}")
-            self.text_input.clear()
+        if not message:
+            return
+        
+        if self.receiver_id is None:
+            QMessageBox.warning(self,"No Recipient","Please Select a contact first.")
+            return
+
+        
+        save_message(self.user_id,self.receiver_id,message)
+        self.text_input.clear()
+        self.select_contacts(self.contacts.currentItem())
 
 
 if __name__ == '__main__':
