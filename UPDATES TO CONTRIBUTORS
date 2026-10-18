@@ -50,3 +50,17 @@ Statement & Made By: Astudillo
 (END)
 ======================================================
 
+======================================================
+BANDIGAN PROGRESS
+
+[Posted Date (October/10/26) | Time (1:00 AM)]
+
+- Started with the database 
+- Created tables that hold the information for users and messages
+- Created functions to create and retrieve users
+- Created functions to save messages into the database
+
+Statement & Made By: BANDIGAN
+
+(END)
+======================================================
