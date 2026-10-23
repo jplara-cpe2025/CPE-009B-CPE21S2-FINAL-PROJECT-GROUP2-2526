@@ -8,7 +8,7 @@ from PyQt6.QtGui import QMovie
 from AccountRegistration import RegistrationApp
 from MainChatroom import Main_Chatroom
 from database import create_tables, get_user, get_all_users
-
+from PyQt6.QtCore import Qt, QPropertyAnimation, QPoint
 
 class App(QWidget):
     def __init__(self):
@@ -47,8 +47,8 @@ class App(QWidget):
         # GIF Display
         self.gif_label = QLabel(self)
         try:
-            self.movie = QMovie("TIP.jpg")
-            self.movie.setScaledSize(QtCore.QSize(250, 250))
+            self.movie = QMovie("qtChat.jpg")
+            self.movie.setScaledSize(QtCore.QSize(200, 200))
             self.gif_label.setMovie(self.movie)
             self.gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.movie.start()
@@ -86,33 +86,58 @@ class App(QWidget):
     def handle_login(self):
         username = self.textbox.text().strip()
         password = self.password.text().strip()
-
+    
         if not username or not password:
+            self.shake()  # Shake on empty fields
             QMessageBox.warning(self, "Login Error", "Please enter both username and password.")
             return
-
+    
         users = get_all_users()
         if not users:
+            self.shake()
             QMessageBox.critical(self, "Error", "No registered accounts found. Please register first.")
             return
         
         user = get_user(username, password)
-
+    
         if user and user[2] == password:
+            self.shake()  # Shake window on successful login before opening chatroom
             QMessageBox.information(self, "Menu Interface", f"Login Successful!\nWelcome to the Menu, {username}!")
             self.textbox.clear()
             self.password.clear()
-
+    
             self.chat_window = Main_Chatroom(user_id=user[0], username=username)
             self.chat_window.show()
-
+    
             self.close()
         else:
+            self.shake()  # Shake on wrong credentials
             QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
+
 
     def open_registration(self):
         self.reg_window = RegistrationApp()
         self.reg_window.show()
+
+###########
+    def shake(self):
+        if hasattr(self, "shake_anim") and self.shake_anim.state() == QPropertyAnimation.State.Running:
+            return
+    
+        current_pos = self.pos()
+        self.shake_anim = QPropertyAnimation(self, b"pos")
+        self.shake_anim.setDuration(300)
+    
+        # Keyframe offsets relative to current position
+        self.shake_anim.setKeyValueAt(0.00, current_pos)
+        self.shake_anim.setKeyValueAt(0.20, current_pos + QPoint(-12, 0))
+        self.shake_anim.setKeyValueAt(0.40, current_pos + QPoint(12, 0))
+        self.shake_anim.setKeyValueAt(0.60, current_pos + QPoint(-8, 0))
+        self.shake_anim.setKeyValueAt(0.80, current_pos + QPoint(8, 0))
+        self.shake_anim.setKeyValueAt(1.00, current_pos)
+    
+        self.shake_anim.start()
+
 
 if __name__ == '__main__':
     create_tables()

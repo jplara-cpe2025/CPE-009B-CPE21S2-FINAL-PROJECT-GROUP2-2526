@@ -41,7 +41,7 @@ class RegistrationApp(QWidget):
         # GIF Display
         self.gif_label = QLabel(self)
         try:
-            self.movie = QMovie("TIP.jpg")
+            self.movie = QMovie("qtChat.jpg")
             self.movie.setScaledSize(QtCore.QSize(200, 200)) 
             self.gif_label.setMovie(self.movie)
             self.movie.start()
