@@ -9,6 +9,7 @@ from PyQt6.QtGui import QPixmap, QPainter, QPainterPath, QIcon
 from database import (save_message, get_all_users, get_messages, 
                       update_user_avatar, update_username, get_user_by_id)
 
+from MenuInterface import App
 # Helper function to crop and render smooth circular pixmaps for avatars
 def get_circular_pixmap(image_path, size=28):
     if image_path and os.path.exists(image_path):
@@ -38,7 +39,7 @@ class ProfileDialog(QDialog):
         self.new_avatar_path = current_avatar
 
         self.setWindowTitle("Edit Profile")
-        self.setFixedSize(320, 290)
+        self.setFixedSize(320, 320)
         self.initUI()
 
     def initUI(self):
@@ -57,6 +58,7 @@ class ProfileDialog(QDialog):
         avatar_container.addWidget(self.avatar_preview)
         avatar_container.addStretch()
         layout.addLayout(avatar_container)
+        layout.addSpacing(25)
 
         # Change Avatar Button
         change_avatar_btn = QPushButton("Change Avatar")
@@ -117,6 +119,23 @@ class ProfileDialog(QDialog):
         save_btn.clicked.connect(self.save_profile)
         layout.addWidget(save_btn)
 
+        # Logout Button
+        logout_btn = QPushButton("Log Out")
+        logout_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #8B5CF6;
+                color: #FFFFFF;
+                border: none;
+                border-radius: 6px;
+                padding: 9px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton:hover { background-color: #7C3AED; }
+        """)
+        logout_btn.clicked.connect(self.logout)
+        layout.addWidget(logout_btn)
+
     def update_avatar_preview(self, path):
         pix = get_circular_pixmap(path, size=64)
         if pix:
@@ -159,6 +178,13 @@ class ProfileDialog(QDialog):
         QMessageBox.information(self, "Success", "Profile updated successfully!")
         self.accept()
 
+    def logout(self):
+        reply = QMessageBox.warning(self,"Log Out","Are you sure you want to log out?",QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.close()
+            self.parent().logout()
+        else:
+            self.close
 
 # Popup Emoji Selector Widget
 class EmojiPicker(QDialog):
@@ -514,6 +540,10 @@ class Main_Chatroom(QMainWindow):
         if self.contacts.currentItem():
             self.select_contacts(self.contacts.currentItem())
 
+    def logout(self):
+        self.menu = App()
+        self.menu.show()
+        self.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
