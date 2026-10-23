@@ -6,7 +6,6 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QMovie
 from AccountRegistration import RegistrationApp
-from MainChatroom import Main_Chatroom
 from database import create_tables, get_user, get_all_users
 from PyQt6.QtCore import Qt, QPropertyAnimation, QPoint
 
@@ -106,10 +105,9 @@ class App(QWidget):
             self.textbox.clear()
             self.password.clear()
     
-            self.chat_window = Main_Chatroom(user_id=user[0], username=username)
-            self.chat_window.show()
-    
+            self.open_chatroom(user,username)
             self.close()
+            
         else:
             self.shake()  # Shake on wrong credentials
             QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
@@ -118,6 +116,11 @@ class App(QWidget):
     def open_registration(self):
         self.reg_window = RegistrationApp()
         self.reg_window.show()
+
+    def open_chatroom(self,user,username):
+        from MainChatroom import Main_Chatroom
+        self.chat_window = Main_Chatroom(user_id=user[0], username=username)
+        self.chat_window.show()
 
 ###########
     def shake(self):
