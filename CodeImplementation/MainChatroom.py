@@ -413,7 +413,8 @@ class Main_Chatroom(QMainWindow):
 
         self.emojiButton = QPushButton("😊")
         self.emojiButton.setObjectName("emojiBtn")
-        self.emojiButton.setFixedWidth(40)
+        self.emojiButton.setFixedWidth(30)
+        self.emojiButton.setFixedHeight(30)
         self.emojiButton.clicked.connect(self.open_emoji_picker)
         send_text.addWidget(self.emojiButton)
 

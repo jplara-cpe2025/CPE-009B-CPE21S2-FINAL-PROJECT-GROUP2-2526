@@ -28,7 +28,7 @@ class App(QWidget):
         self.setStyleSheet("""
             QWidget { background-color: #F8FAFC; color: #1E1B4B; font-family: 'Segoe UI', sans-serif; }
             QLabel { font-size: 13px; font-weight: 600; color: #1E1B4B; }
-            QLineEdit { background-color: #FFFFFF; color: #1E1B4B; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+            QLineEdit { background-color: #FFFFFF; color: #1E1B4B; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px 10px; font-size: 13px; min-width: 220px;}
             QLineEdit:focus { border: 2px solid #8B5CF6; }
             QPushButton#loginBtn { background-color: #8B5CF6; color: #FFFFFF; border: none; border-radius: 6px; padding: 8px; font-weight: bold; font-size: 13px; }
             QPushButton#loginBtn:hover { background-color: #7C3AED; }
@@ -47,8 +47,8 @@ class App(QWidget):
         # GIF Display
         self.gif_label = QLabel(self)
         try:
-            self.movie = QMovie("/Users/lourdes/Desktop/TIP.png")
-            self.movie.setScaledSize(QtCore.QSize(250, 150))
+            self.movie = QMovie("TIP.jpg")
+            self.movie.setScaledSize(QtCore.QSize(250, 250))
             self.gif_label.setMovie(self.movie)
             self.gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.movie.start()
