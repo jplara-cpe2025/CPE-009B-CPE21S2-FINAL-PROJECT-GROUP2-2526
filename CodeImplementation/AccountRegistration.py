@@ -1,10 +1,8 @@
 import sys
-import os
-import csv
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox)
-from PyQt6.QtGui import QIcon, QMovie
+from PyQt6.QtGui import QMovie
 
 from database import create_user
 
@@ -22,6 +20,16 @@ class RegistrationApp(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.x, self.y, self.width, self.height)
         
+        # Color Palette Stylesheet
+        self.setStyleSheet("""
+            QWidget { background-color: #F8FAFC; color: #1E1B4B; font-family: 'Segoe UI', sans-serif; }
+            QLabel { font-size: 12px; font-weight: 600; color: #1E1B4B; }
+            QLineEdit { background-color: #FFFFFF; color: #1E1B4B; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+            QLineEdit:focus { border: 2px solid #8B5CF6; }
+            QPushButton { background-color: #8B5CF6; color: #FFFFFF; border: none; border-radius: 6px; padding: 8px; font-weight: bold; font-size: 13px; }
+            QPushButton:hover { background-color: #7C3AED; }
+        """)
+
         self.createGridLayout()
         self.setLayout(self.layout)
         self.show()
@@ -32,11 +40,15 @@ class RegistrationApp(QWidget):
 
         # GIF Display
         self.gif_label = QLabel(self)
-        self.movie = QMovie("/Users/lourdes/Desktop/TIP.png")
-        self.movie.setScaledSize(QtCore.QSize(300, 400)) 
-        self.gif_label.setMovie(self.movie)
+        try:
+            self.movie = QMovie("/Users/lourdes/Desktop/TIP.png")
+            self.movie.setScaledSize(QtCore.QSize(300, 150)) 
+            self.gif_label.setMovie(self.movie)
+            self.movie.start()
+        except Exception:
+            self.gif_label.setText("📝 Account Registration")
+            self.gif_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #8B5CF6;")
         self.gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter) 
-        self.movie.start()
 
         # Input Widgets
         self.first_namelbl = QLabel("First Name: ", self)
@@ -62,27 +74,20 @@ class RegistrationApp(QWidget):
         self.button.setToolTip("Click to register your account")
         self.button.clicked.connect(self.register_account)
 
-        # Layout 
+        # Layout
         self.layout.addWidget(self.gif_label, 0, 1, 1, 2)
-        
         self.layout.addWidget(self.first_namelbl, 1, 1)
         self.layout.addWidget(self.first_name, 1, 2)
-        
         self.layout.addWidget(self.last_namelbl, 2, 1)
         self.layout.addWidget(self.last_name, 2, 2)
-        
         self.layout.addWidget(self.emaillbl, 3, 1)
         self.layout.addWidget(self.email, 3, 2)
-        
         self.layout.addWidget(self.contactlbl, 4, 1)
         self.layout.addWidget(self.contact, 4, 2)
-        
         self.layout.addWidget(self.textboxlbl, 5, 1)
         self.layout.addWidget(self.textbox, 5, 2)
-        
         self.layout.addWidget(self.passwordlbl, 6, 1)
         self.layout.addWidget(self.password, 6, 2)
-        
         self.layout.addWidget(self.button, 7, 2)
 
     def register_account(self):
@@ -102,8 +107,8 @@ class RegistrationApp(QWidget):
             msg_box.exec()
             return
 
-        # Save the account to the databasee
-        success = create_user(username, password)
+        # Save the account to the database
+        success, msg = create_user(username, password)
 
         if success:
             # Success Notification
@@ -120,16 +125,17 @@ class RegistrationApp(QWidget):
             self.contact.clear()
             self.textbox.clear()
             self.password.clear()
-
+            self.close()
         else:
             msg_box = QMessageBox(self)
             msg_box.setIcon(QMessageBox.Icon.Critical)
             msg_box.setWindowTitle("Registration Error")
-            msg_box.setText(f"An error occurred while saving to database")
+            msg_box.setText(msg)
             msg_box.exec()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = RegistrationApp()
-    sys.exit(app.exec())        
+    sys.exit(app.exec())
+    

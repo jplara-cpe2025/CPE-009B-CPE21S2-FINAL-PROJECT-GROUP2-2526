@@ -1,20 +1,22 @@
 import sqlite3
 
+# Initialize database tables for users and messages, including avatar support
 def create_tables():
     connection = sqlite3.connect("chat.db")
     cursor = connection.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users(
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            avatar TEXT DEFAULT ''
         )
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages(
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER NOT NULL,
             receiver_id INTEGER NOT NULL,
             message TEXT NOT NULL,
@@ -27,41 +29,82 @@ def create_tables():
     connection.commit()
     connection.close()
 
+# Save a newly registered user account to the database
 def create_user(username, password):
     connection = sqlite3.connect("chat.db")
     cursor = connection.cursor()
 
-    cursor.execute("""
-        INSERT INTO users (username, password)
-        VALUES (?, ?)
-    """, (username, password))
+    try:
+        cursor.execute("""
+            INSERT INTO users (username, password)
+            VALUES (?, ?)
+        """, (username, password))
+        connection.commit()
+        connection.close()
+        return True, "Account registered successfully!"
+    except sqlite3.IntegrityError:
+        connection.close()
+        return False, "Username already exists. Please choose another."
 
-    connection.commit()
-    connection.close()
-    return True
-
-def get_user(username):
+# Retrieve a single user record by username
+def get_user(username, password=None):
     connection = sqlite3.connect("chat.db")
     cursor = connection.cursor()
 
-    cursor.execute("""
-        SELECT id, username, password
-        FROM users
-        WHERE username = ?
-    """, (username,))
+    if password is not None:
+        cursor.execute("""
+            SELECT id, username, password 
+            FROM users
+            WHERE username = ? AND password = ?
+        """, (username, password))
+    else:
+        cursor.execute("""
+            SELECT id, username, password
+            FROM users
+            WHERE username = ?
+        """, (username,))
 
     user = cursor.fetchone()
-
     connection.close()
-
     return user
 
+# Retrieve user details including avatar path by user ID
+def get_user_by_id(user_id):
+    connection = sqlite3.connect("chat.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT id, username, avatar FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    connection.close()
+    return user
+
+# Update a user's username
+def update_username(user_id, new_username):
+    connection = sqlite3.connect("chat.db")
+    cursor = connection.cursor()
+    try:
+        cursor.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, user_id))
+        connection.commit()
+        connection.close()
+        return True, "Username updated successfully!"
+    except sqlite3.IntegrityError:
+        connection.close()
+        return False, "Username already taken. Choose another."
+
+# Update a user's avatar file path
+def update_user_avatar(user_id, avatar_path):
+    connection = sqlite3.connect("chat.db")
+    cursor = connection.cursor()
+    cursor.execute("UPDATE users SET avatar = ? WHERE id = ?", (avatar_path, user_id))
+    connection.commit()
+    connection.close()
+
+# Retrieve all registered users sorted alphabetically
 def get_all_users():
     connection = sqlite3.connect("chat.db")
     cursor = connection.cursor()
 
     cursor.execute("""
-        SELECT id, username
+        SELECT id, username, avatar
         FROM users
         ORDER BY username ASC
     """)
@@ -70,6 +113,7 @@ def get_all_users():
 
     return users
 
+# Save chat message to database
 def save_message(sender_id, receiver_id, message):
     connection = sqlite3.connect("chat.db")
     cursor = connection.cursor()
@@ -82,7 +126,8 @@ def save_message(sender_id, receiver_id, message):
     connection.commit()
     connection.close()
 
-def get_messages(id1,id2):
+# Retrieve message history between two users
+def get_messages(id1, id2):
     connection = sqlite3.connect("chat.db")
     cursor = connection.cursor()
 
@@ -94,9 +139,8 @@ def get_messages(id1,id2):
             OR
             (sender_id = ? AND receiver_id = ?)
         ORDER BY timestamp ASC
-    """,(id1,id2,id2,id1))
+    """, (id1, id2, id2, id1))
 
     messages = cursor.fetchall()
-
     connection.close()
-    return messages 
+    return messages

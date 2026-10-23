@@ -1,19 +1,16 @@
 import sys
-import os
-import csv
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 )
-from PyQt6.QtGui import QIcon, QMovie
+from PyQt6.QtGui import QMovie
 from AccountRegistration import RegistrationApp
 from MainChatroom import Main_Chatroom
-from database import create_tables,get_user,get_all_users
+from database import create_tables, get_user, get_all_users
 
 
 class App(QWidget):
-
     def __init__(self):
         super().__init__()
         self.title = "Menu & Login Screen"
@@ -26,6 +23,19 @@ class App(QWidget):
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.x, self.y, self.width, self.height)
+        
+        # Purple / Blue / Cyan Theme Color Palette
+        self.setStyleSheet("""
+            QWidget { background-color: #F8FAFC; color: #1E1B4B; font-family: 'Segoe UI', sans-serif; }
+            QLabel { font-size: 13px; font-weight: 600; color: #1E1B4B; }
+            QLineEdit { background-color: #FFFFFF; color: #1E1B4B; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+            QLineEdit:focus { border: 2px solid #8B5CF6; }
+            QPushButton#loginBtn { background-color: #8B5CF6; color: #FFFFFF; border: none; border-radius: 6px; padding: 8px; font-weight: bold; font-size: 13px; }
+            QPushButton#loginBtn:hover { background-color: #7C3AED; }
+            QPushButton#regBtn { background-color: #3B82F6; color: #FFFFFF; border: none; border-radius: 6px; padding: 8px; font-weight: bold; font-size: 13px; }
+            QPushButton#regBtn:hover { background-color: #2563EB; }
+        """)
+
         self.createGridLayout()
         self.setLayout(self.layout)
         self.show()
@@ -36,11 +46,15 @@ class App(QWidget):
 
         # GIF Display
         self.gif_label = QLabel(self)
-        self.movie = QMovie("/Users/lourdes/Desktop/TIP.png")
-        self.movie.setScaledSize(QtCore.QSize(250, 150))
-        self.gif_label.setMovie(self.movie)
-        self.gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.movie.start()
+        try:
+            self.movie = QMovie("/Users/lourdes/Desktop/TIP.png")
+            self.movie.setScaledSize(QtCore.QSize(250, 150))
+            self.gif_label.setMovie(self.movie)
+            self.gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.movie.start()
+        except Exception:
+            self.gif_label.setText("💬 Local Chat")
+            self.gif_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #8B5CF6;")
 
         # Widgets
         self.textboxlbl = QLabel("Username: ", self)
@@ -51,10 +65,12 @@ class App(QWidget):
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
         
         self.login_button = QPushButton('Login', self)
+        self.login_button.setObjectName("loginBtn")
         self.login_button.setToolTip("Click to log in")
         self.login_button.clicked.connect(self.handle_login)
 
         self.register_button = QPushButton('Register Account', self)
+        self.register_button.setObjectName("regBtn")
         self.register_button.setToolTip("Click to open registration form")
         self.register_button.clicked.connect(self.open_registration)
 
@@ -80,14 +96,14 @@ class App(QWidget):
             QMessageBox.critical(self, "Error", "No registered accounts found. Please register first.")
             return
         
-        user = get_user(username)
+        user = get_user(username, password)
 
         if user and user[2] == password:
             QMessageBox.information(self, "Menu Interface", f"Login Successful!\nWelcome to the Menu, {username}!")
             self.textbox.clear()
             self.password.clear()
 
-            self.chat_window = Main_Chatroom(user_id=user[0],username=username)
+            self.chat_window = Main_Chatroom(user_id=user[0], username=username)
             self.chat_window.show()
 
             self.close()
