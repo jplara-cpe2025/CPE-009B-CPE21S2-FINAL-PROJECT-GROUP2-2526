@@ -29,5 +29,6 @@ Project: **DChat - Simple Chat Application (username, chat threading w/ email)**
 ## 🖼️ Screenshot
 
 <img width="655" height="499" alt="image" src="https://github.com/user-attachments/assets/0a04bb03-a302-4254-bf9b-f308ff1fd09b" />
+
 **Figure 1: Menu & Login Screen**
 
