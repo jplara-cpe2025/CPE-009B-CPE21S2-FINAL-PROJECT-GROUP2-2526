@@ -7,9 +7,7 @@ This GitHub repository contains the source codes and files used in the developme
 
 ## ℹ️ Description
 
-Project: **QtChat - Simple Chat Application (username, chat threading w/ email)**
-
-<img width="256" height="256" alt="logo" src="https://github.com/user-attachments/assets/e271224b-7be9-4917-b634-829765b57bf6" />
+Project: **DChat - Simple Chat Application (username, chat threading w/ email)**
 
 ## 🚹 Members
 
