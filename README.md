@@ -28,12 +28,4 @@ Project: **DChat - Simple Chat Application (username, chat threading w/ email)**
 
 ## 🖼️ Screenshot
 
-<img width="551" height="426" alt="image" src="https://github.com/user-attachments/assets/615920b1-c934-46f3-a6c6-953927008a71" />
-
-<img width="555" height="449" alt="image" src="https://github.com/user-attachments/assets/68f9a4c9-7534-4fee-a48d-27df18c98b7f" />
-
-<img width="797" height="538" alt="image" src="https://github.com/user-attachments/assets/34ba9b24-50f1-4497-b126-6eb15d56d92d" />
-
-<img width="224" height="210" alt="image" src="https://github.com/user-attachments/assets/c5f3915b-ae03-471b-96fa-5ce2803bf507" />
-
-<img width="318" height="388" alt="image" src="https://github.com/user-attachments/assets/d73a5434-a9c6-410c-b3f9-162e45d6aba3" />
+<img width="655" height="499" alt="image" src="https://github.com/user-attachments/assets/0a04bb03-a302-4254-bf9b-f308ff1fd09b" />
