@@ -13,16 +13,16 @@ from database import (save_message, get_all_users, get_messages,
 from MenuInterface import App
 
 # ---------------------------------------------------------------- Palette
-BG_COLOR = "#F5F5DC"       # cream background
-PANEL_COLOR = "#CBC7B6"    # taupe panels (chat list / chat area)
-PANEL_SELECT = "#B8B4A1"   # selected / hovered contact
-INK_COLOR = "#000000"      # text, icons, borders
-BTN_COLOR = "#57534B"      # dark gray (primary buttons, my message bubbles)
+BG_COLOR = "#F5F5DC"
+PANEL_COLOR = "#CBC7B6"
+PANEL_SELECT = "#B8B4A1"
+INK_COLOR = "#000000"
+BTN_COLOR = "#57534B"
 BTN_HOVER = "#3F3C36"
 BTN_TEXT = "#F5F5DC"
 MUTED_TEXT = "#57534B"
 
-# ---------------------------------------------------------------- Icons (inline SVG, no image files needed)
+# ---------------------------------------------------------------- 
 ICON_USER = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000">'
              '<circle cx="12" cy="7.5" r="5"/><path d="M2.5 22c0-5.5 4.2-8.5 9.5-8.5s9.5 3 9.5 8.5z"/></svg>')
 
@@ -33,7 +33,6 @@ ICON_SMILEY = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
                '<path d="M6.8 14c1.3 2.8 9.1 2.8 10.4 0" fill="none" stroke="#000" '
                'stroke-width="1.4" stroke-linecap="round"/></svg>')
 
-# Window / taskbar icon: cream speech bubble on a dark rounded square
 APP_ICON_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
     f'<rect width="64" height="64" rx="14" fill="{BTN_COLOR}"/>'
@@ -66,8 +65,6 @@ def make_transparent(list_widget):
     list_widget.viewport().setAutoFillBackground(False)
     list_widget.viewport().setStyleSheet("background: transparent;")
 
-
-# ---------------------------------------------------------------- Shared stylesheet
 STYLE = f"""
     QMainWindow, QWidget, QDialog {{
         background-color: {BG_COLOR};
@@ -147,7 +144,6 @@ STYLE = f"""
     QPushButton#primaryBtn:pressed {{ background-color: {INK_COLOR}; }}
 """
 
-
 # Helper function to crop and render smooth circular pixmaps for avatars
 def get_circular_pixmap(image_path, size=28):
     if image_path and os.path.exists(image_path):
@@ -166,7 +162,6 @@ def get_circular_pixmap(image_path, size=28):
             painter.end()
             return out_pixmap
     return None
-
 
 # Profile Edit Dialog
 class ProfileDialog(QDialog):
@@ -188,7 +183,6 @@ class ProfileDialog(QDialog):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(12)
 
-        # Centered Avatar Preview
         self.avatar_preview = QLabel()
         self.avatar_preview.setFixedSize(64, 64)
         self.avatar_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -201,7 +195,6 @@ class ProfileDialog(QDialog):
         layout.addLayout(avatar_container)
         layout.addSpacing(10)
 
-        # Change Avatar Button
         change_avatar_btn = QPushButton("Change Avatar")
         change_avatar_btn.setObjectName("outlineBtn")
         change_avatar_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -289,8 +282,6 @@ class ProfileDialog(QDialog):
             self.close()
             self.parent().logout()
 
-
-# Popup Emoji Selector Widget
 class EmojiPicker(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -325,8 +316,6 @@ class EmojiPicker(QDialog):
         self.selected_emoji = emoji
         self.accept()
 
-
-# Custom Widget for Contacts Sidebar List with Avatar
 class ContactItemWidget(QWidget):
     def __init__(self, username, avatar_path):
         super().__init__()
@@ -361,8 +350,6 @@ class ContactItemWidget(QWidget):
         layout.addWidget(name_label)
         layout.addStretch()
 
-
-# Custom Widget for Message Bubbles
 class MessageBubble(QWidget):
     def __init__(self, message, timestamp, is_self):
         super().__init__()
@@ -461,7 +448,6 @@ class Main_Chatroom(QMainWindow):
         content_layout = QHBoxLayout()
         content_layout.setSpacing(16)
 
-        # Chats / Users
         self.user_chats = QVBoxLayout()
         self.user_chats.setContentsMargins(0, 0, 0, 0)
         self.chats_display = QLabel("Chats")
@@ -479,7 +465,6 @@ class Main_Chatroom(QMainWindow):
         contacts_list.setMaximumWidth(210)
         content_layout.addWidget(contacts_list)
 
-        # Main Chat System (rounded taupe panel holding messages + input row)
         chat_panel = QFrame()
         chat_panel.setObjectName("chatPanel")
         chat_area = QVBoxLayout(chat_panel)
@@ -567,7 +552,7 @@ class Main_Chatroom(QMainWindow):
             contact_widget = ContactItemWidget(username, avatar_path)
             item = QListWidgetItem(self.contacts)
             item.setData(Qt.ItemDataRole.UserRole, int(user_id))
-            item.setText("")  # Clears underlying default text rendering behind custom widget
+            item.setText("")
             item.setSizeHint(contact_widget.sizeHint())
 
             self.contacts.addItem(item)
@@ -613,7 +598,6 @@ class Main_Chatroom(QMainWindow):
 
 
 if __name__ == '__main__':
-    # Optional (Windows): makes the taskbar show your icon instead of Python's
     try:
         import ctypes
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("local.chatroom.app.1")
@@ -623,8 +607,5 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setWindowIcon(make_app_icon())
     ex = Main_Chatroom(user_id=1, username='TestUser')
-
-    # Uncomment once to export the icon as a PNG (e.g. for PyInstaller / converting to .ico):
-    # svg_to_pixmap(APP_ICON_SVG, 256).save("chat_icon.png")
 
     sys.exit(app.exec())
