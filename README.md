@@ -24,3 +24,13 @@ Project: **QtChat - Simple Chat Application (username, chat threading w/ email)*
 * BENJ ARIEL RATCHO
 
 * JOHREL LOUIE SILAO
+
+## 🖼️ Screenshot
+
+<img width="346" height="476" alt="image" src="https://github.com/user-attachments/assets/2d45fe4a-4bbb-4d1b-8835-9f1c66ad03dd" />
+
+<img width="743" height="475" alt="image" src="https://github.com/user-attachments/assets/13053ed1-c63c-4880-93c9-3ac3503636fd" />
+
+<img width="223" height="213" alt="image" src="https://github.com/user-attachments/assets/57eeca5c-f173-4a67-846d-b8f2ec5a6dce" />
+
+<img width="318" height="342" alt="image" src="https://github.com/user-attachments/assets/10ecff93-5a9b-4280-b158-c029f23f3420" />
