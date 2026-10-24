@@ -46,7 +46,7 @@ class App(QWidget):
         # GIF Display
         self.gif_label = QLabel(self)
         try:
-            self.movie = QMovie("qtChat.jpg")
+            self.movie = QMovie("logo.png")
             self.movie.setScaledSize(QtCore.QSize(200, 200))
             self.gif_label.setMovie(self.movie)
             self.gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
