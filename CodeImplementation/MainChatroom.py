@@ -1,15 +1,153 @@
 import sys
 import os
-from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QByteArray, QSize
 from PyQt6.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
-                             QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QDialog, QFileDialog)
+                             QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QDialog,
+                             QFileDialog, QFrame)
 from PyQt6.QtGui import QPixmap, QPainter, QPainterPath, QIcon
+from PyQt6.QtSvg import QSvgRenderer
 
-from database import (save_message, get_all_users, get_messages, 
+from database import (save_message, get_all_users, get_messages,
                       update_user_avatar, update_username, get_user_by_id)
 
 from MenuInterface import App
+
+# ---------------------------------------------------------------- Palette
+BG_COLOR = "#F5F5DC"       # cream background
+PANEL_COLOR = "#CBC7B6"    # taupe panels (chat list / chat area)
+PANEL_SELECT = "#B8B4A1"   # selected / hovered contact
+INK_COLOR = "#000000"      # text, icons, borders
+BTN_COLOR = "#57534B"      # dark gray (primary buttons, my message bubbles)
+BTN_HOVER = "#3F3C36"
+BTN_TEXT = "#F5F5DC"
+MUTED_TEXT = "#57534B"
+
+# ---------------------------------------------------------------- Icons (inline SVG, no image files needed)
+ICON_USER = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000">'
+             '<circle cx="12" cy="7.5" r="5"/><path d="M2.5 22c0-5.5 4.2-8.5 9.5-8.5s9.5 3 9.5 8.5z"/></svg>')
+
+ICON_SMILEY = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+               '<circle cx="12" cy="12" r="10" fill="#FFD21F" stroke="#8A6A00" stroke-width="1.2"/>'
+               '<ellipse cx="8.8" cy="9.5" rx="1" ry="1.6" fill="#000"/>'
+               '<ellipse cx="15.2" cy="9.5" rx="1" ry="1.6" fill="#000"/>'
+               '<path d="M6.8 14c1.3 2.8 9.1 2.8 10.4 0" fill="none" stroke="#000" '
+               'stroke-width="1.4" stroke-linecap="round"/></svg>')
+
+# Window / taskbar icon: cream speech bubble on a dark rounded square
+APP_ICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+    f'<rect width="64" height="64" rx="14" fill="{BTN_COLOR}"/>'
+    f'<rect x="10" y="13" width="44" height="30" rx="11" fill="{BG_COLOR}"/>'
+    f'<path d="M20 40l0 12 13-12z" fill="{BG_COLOR}"/>'
+    f'<g fill="{BTN_COLOR}"><circle cx="22" cy="28" r="3"/><circle cx="32" cy="28" r="3"/>'
+    '<circle cx="42" cy="28" r="3"/></g></svg>'
+)
+
+
+def svg_to_pixmap(svg_text, size):
+    renderer = QSvgRenderer(QByteArray(svg_text.encode("utf-8")))
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return pixmap
+
+
+def make_app_icon():
+    icon = QIcon()
+    for s in (16, 32, 48, 64, 128, 256):
+        icon.addPixmap(svg_to_pixmap(APP_ICON_SVG, s))
+    return icon
+
+
+def make_transparent(list_widget):
+    """Lets the rounded panel colour show through the list's viewport."""
+    list_widget.viewport().setAutoFillBackground(False)
+    list_widget.viewport().setStyleSheet("background: transparent;")
+
+
+# ---------------------------------------------------------------- Shared stylesheet
+STYLE = f"""
+    QMainWindow, QWidget, QDialog {{
+        background-color: {BG_COLOR};
+        color: {INK_COLOR};
+        font-family: 'Segoe UI', sans-serif;
+    }}
+    QLabel {{ background: transparent; color: {INK_COLOR}; }}
+
+    /* Rounded taupe panels */
+    QListWidget#contactsWidget {{
+        background-color: {PANEL_COLOR};
+        border: 2px solid {INK_COLOR};
+        border-radius: 34px;
+        padding: 14px 10px;
+        font-size: 14px;
+        outline: none;
+    }}
+    QListWidget#contactsWidget::item {{ border-radius: 14px; margin-bottom: 2px; }}
+    QListWidget#contactsWidget::item:hover {{ background-color: {PANEL_SELECT}; }}
+    QListWidget#contactsWidget::item:selected {{ background-color: {PANEL_SELECT}; }}
+
+    QFrame#chatPanel {{
+        background-color: {PANEL_COLOR};
+        border: 2px solid {INK_COLOR};
+        border-radius: 34px;
+    }}
+    QListWidget#chatWidget {{
+        background: transparent;
+        border: none;
+        outline: none;
+    }}
+    QListWidget#chatWidget::item {{ border: none; background: transparent; }}
+    QListWidget#chatWidget::item:selected {{ background: transparent; }}
+
+    QScrollBar:vertical {{ background: transparent; width: 10px; margin: 14px 2px; }}
+    QScrollBar::handle:vertical {{ background: {BTN_COLOR}; border-radius: 3px; min-height: 24px; }}
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
+
+    /* Pill inputs */
+    QLineEdit {{
+        background-color: {BG_COLOR};
+        color: {INK_COLOR};
+        border: 2px solid {INK_COLOR};
+        border-radius: 19px;
+        padding: 0 16px;
+        font-size: 13px;
+        min-height: 34px;
+    }}
+    QLineEdit:focus {{ background-color: #FFFFFF; }}
+
+    /* Pill buttons: outline style (Send, Emoji, Profile) */
+    QPushButton#sendBtn, QPushButton#emojiBtn, QPushButton#profileBtn, QPushButton#outlineBtn {{
+        background-color: {BG_COLOR};
+        color: {INK_COLOR};
+        border: 2px solid {INK_COLOR};
+        border-radius: 19px;
+        min-height: 34px;
+        font-size: 13px;
+    }}
+    QPushButton#sendBtn {{ padding: 0 20px; }}
+    QPushButton#profileBtn {{ padding: 2px 16px; font-size: 12px; border-radius: 20px; }}
+    QPushButton#sendBtn:hover, QPushButton#emojiBtn:hover,
+    QPushButton#profileBtn:hover, QPushButton#outlineBtn:hover {{ background-color: {PANEL_COLOR}; }}
+
+    /* Pill buttons: solid dark style (dialog primary actions) */
+    QPushButton#primaryBtn {{
+        background-color: {BTN_COLOR};
+        color: {BTN_TEXT};
+        border: 2px solid {INK_COLOR};
+        border-radius: 19px;
+        min-height: 34px;
+        font-size: 13px;
+        font-weight: bold;
+    }}
+    QPushButton#primaryBtn:hover {{ background-color: {BTN_HOVER}; }}
+    QPushButton#primaryBtn:pressed {{ background-color: {INK_COLOR}; }}
+"""
+
+
 # Helper function to crop and render smooth circular pixmaps for avatars
 def get_circular_pixmap(image_path, size=28):
     if image_path and os.path.exists(image_path):
@@ -29,6 +167,7 @@ def get_circular_pixmap(image_path, size=28):
             return out_pixmap
     return None
 
+
 # Profile Edit Dialog
 class ProfileDialog(QDialog):
     def __init__(self, user_id, current_username, current_avatar, parent=None):
@@ -39,7 +178,9 @@ class ProfileDialog(QDialog):
         self.new_avatar_path = current_avatar
 
         self.setWindowTitle("Edit Profile")
-        self.setFixedSize(320, 320)
+        self.setWindowIcon(make_app_icon())
+        self.setStyleSheet(STYLE)
+        self.setFixedSize(320, 360)
         self.initUI()
 
     def initUI(self):
@@ -58,24 +199,14 @@ class ProfileDialog(QDialog):
         avatar_container.addWidget(self.avatar_preview)
         avatar_container.addStretch()
         layout.addLayout(avatar_container)
-        layout.addSpacing(25)
+        layout.addSpacing(10)
 
         # Change Avatar Button
         change_avatar_btn = QPushButton("Change Avatar")
-        change_avatar_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 14px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover { background-color: #2563EB; }
-        """)
+        change_avatar_btn.setObjectName("outlineBtn")
+        change_avatar_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         change_avatar_btn.clicked.connect(self.select_new_avatar)
-        
+
         btn_container = QHBoxLayout()
         btn_container.addStretch()
         btn_container.addWidget(change_avatar_btn)
@@ -84,55 +215,25 @@ class ProfileDialog(QDialog):
 
         # Username Input
         user_label = QLabel("Username")
-        user_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #1E1B4B; margin-top: 4px;")
+        user_label.setStyleSheet("font-size: 13px; font-weight: bold; margin-top: 4px;")
         layout.addWidget(user_label)
 
         self.username_input = QLineEdit(self.current_username)
-        self.username_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 8px 10px;
-                font-size: 13px;
-                color: #1E1B4B;
-            }
-        """)
         layout.addWidget(self.username_input)
 
         layout.addStretch()
 
         # Save Button
         save_btn = QPushButton("Save Changes")
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #8B5CF6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 9px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton:hover { background-color: #7C3AED; }
-        """)
+        save_btn.setObjectName("primaryBtn")
+        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self.save_profile)
         layout.addWidget(save_btn)
 
         # Logout Button
         logout_btn = QPushButton("Log Out")
-        logout_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #8B5CF6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 9px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton:hover { background-color: #7C3AED; }
-        """)
+        logout_btn.setObjectName("primaryBtn")
+        logout_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         logout_btn.clicked.connect(self.logout)
         layout.addWidget(logout_btn)
 
@@ -144,9 +245,10 @@ class ProfileDialog(QDialog):
         else:
             initial = self.current_username[0].upper() if self.current_username else "U"
             self.avatar_preview.setText(initial)
-            self.avatar_preview.setStyleSheet("""
-                background-color: #3B82F6;
-                color: #FFFFFF;
+            self.avatar_preview.setStyleSheet(f"""
+                background-color: {BTN_COLOR};
+                color: {BTN_TEXT};
+                border: 2px solid {INK_COLOR};
                 border-radius: 32px;
                 font-size: 24px;
                 font-weight: bold;
@@ -179,22 +281,27 @@ class ProfileDialog(QDialog):
         self.accept()
 
     def logout(self):
-        reply = QMessageBox.warning(self,"Log Out","Are you sure you want to log out?",QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,)
+        reply = QMessageBox.warning(
+            self, "Log Out", "Are you sure you want to log out?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
         if reply == QMessageBox.StandardButton.Yes:
             self.close()
             self.parent().logout()
-        else:
-            self.close
+
 
 # Popup Emoji Selector Widget
 class EmojiPicker(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select Emoji")
-        self.setFixedSize(220, 180)
+        self.setWindowIcon(make_app_icon())
+        self.setStyleSheet(STYLE)
+        self.setFixedSize(230, 180)
         self.selected_emoji = ""
 
         grid = QGridLayout()
+        grid.setContentsMargins(12, 12, 12, 12)
         emojis = [
             '😊', '😂', '👍', '❤️', '🎉',
             '🔥', '😎', '🙏', '😭', '✨',
@@ -205,7 +312,10 @@ class EmojiPicker(QDialog):
         for pos, emoji in zip(positions, emojis):
             btn = QPushButton(emoji)
             btn.setFixedSize(36, 36)
-            btn.setStyleSheet("font-size: 16px; border: 1px solid #CBD5E1; border-radius: 6px; background: #FFFFFF; color: #1E1B4B;")
+            btn.setStyleSheet(f"""
+                QPushButton {{ font-size: 16px; border: 1.5px solid {INK_COLOR}; border-radius: 18px; background: {BG_COLOR}; color: {INK_COLOR}; }}
+                QPushButton:hover {{ background: {PANEL_COLOR}; }}
+            """)
             btn.clicked.connect(lambda _, e=emoji: self.pick_emoji(e))
             grid.addWidget(btn, *pos)
 
@@ -220,7 +330,8 @@ class EmojiPicker(QDialog):
 class ContactItemWidget(QWidget):
     def __init__(self, username, avatar_path):
         super().__init__()
-        
+        self.setStyleSheet("background: transparent;")
+
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(10)
@@ -235,26 +346,27 @@ class ContactItemWidget(QWidget):
         else:
             initial = username[0].upper() if username else "U"
             avatar_label.setText(initial)
-            avatar_label.setStyleSheet("""
-                background-color: #3B82F6;
-                color: #FFFFFF;
+            avatar_label.setStyleSheet(f"""
+                background-color: {BTN_COLOR};
+                color: {BTN_TEXT};
                 border-radius: 14px;
                 font-size: 12px;
                 font-weight: bold;
             """)
 
         name_label = QLabel(username)
-        name_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #1E1B4B; background: transparent;")
+        name_label.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {INK_COLOR}; background: transparent;")
 
         layout.addWidget(avatar_label)
         layout.addWidget(name_label)
         layout.addStretch()
 
 
-# Custom Widget for Message Bubbles (hehe Tried to do it like old messenger)
+# Custom Widget for Message Bubbles
 class MessageBubble(QWidget):
     def __init__(self, message, timestamp, is_self):
         super().__init__()
+        self.setStyleSheet("background: transparent;")
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(8, 4, 8, 4)
@@ -262,19 +374,19 @@ class MessageBubble(QWidget):
 
         container = QWidget()
         box_layout = QVBoxLayout(container)
-        box_layout.setContentsMargins(12, 8, 12, 8)
+        box_layout.setContentsMargins(14, 8, 14, 8)
 
         msg_label = QLabel(message)
         msg_label.setWordWrap(True)
 
         time_label = QLabel(timestamp)
-        time_label.setStyleSheet("font-size: 9px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: #64748B; margin-top: 1px;")
+        time_label.setStyleSheet(f"font-size: 9px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: {MUTED_TEXT}; margin-top: 1px;")
 
         bubble_row = QHBoxLayout()
 
         if is_self:
-            container.setStyleSheet("QWidget { background-color: #8B5CF6; border-radius: 4px; }")
-            msg_label.setStyleSheet("font-size: 13px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: #FFFFFF;")
+            container.setStyleSheet(f"QWidget {{ background-color: {BTN_COLOR}; border: 2px solid {INK_COLOR}; border-radius: 14px; }}")
+            msg_label.setStyleSheet(f"font-size: 13px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: {BTN_TEXT};")
             box_layout.addWidget(msg_label)
 
             bubble_row.addStretch()
@@ -283,8 +395,8 @@ class MessageBubble(QWidget):
             main_layout.addLayout(bubble_row)
             main_layout.addWidget(time_label, alignment=Qt.AlignmentFlag.AlignRight)
         else:
-            container.setStyleSheet("QWidget { background-color: #E2E8F0; border-radius: 4px; }")
-            msg_label.setStyleSheet("font-size: 13px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: #1E1B4B;")
+            container.setStyleSheet(f"QWidget {{ background-color: {BG_COLOR}; border: 2px solid {INK_COLOR}; border-radius: 14px; }}")
+            msg_label.setStyleSheet(f"font-size: 13px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: {INK_COLOR};")
             box_layout.addWidget(msg_label)
 
             bubble_row.addWidget(container)
@@ -301,7 +413,7 @@ class Main_Chatroom(QMainWindow):
         self.user_id = user_id
         self.receiver_id = None
         self.user_avatar = ""
-        
+
         user_info = get_user_by_id(self.user_id)
         if user_info:
             self.username = user_info[1]
@@ -310,90 +422,33 @@ class Main_Chatroom(QMainWindow):
         self.title = f"Local Chatroom - Logged in as: {self.username}"
         self.x = 200
         self.y = 200
-        self.width = 750
-        self.height = 450
+        self.width = 800
+        self.height = 500
         self.initUI()
         self.load_contacts()
 
-    # Purple / Blue / Cyan Theme Color Palette
     def initUI(self):
         self.setWindowTitle(self.title)
+        self.setWindowIcon(make_app_icon())
         self.setGeometry(self.x, self.y, self.width, self.height)
-
-        self.setStyleSheet("""
-            QMainWindow, QWidget {
-                background-color: #F8FAFC;
-                color: #1E1B4B;
-                font-family: 'Segoe UI', sans-serif;
-            }
-            QLabel { color: #1E1B4B; }
-            QListWidget#contactsWidget {
-                background-color: #FFFFFF;
-                color: #1E1B4B;
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
-                font-size: 14px;
-                padding: 5px;
-            }
-            QListWidget#contactsWidget::item { border-radius: 6px; margin-bottom: 2px; }
-            QListWidget#contactsWidget::item:selected { background-color: #E2E8F0; }
-            QListWidget#chatWidget {
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
-                background-color: #FFFFFF;
-            }
-            QListWidget#chatWidget::item { border: none; background: transparent; }
-            QListWidget#chatWidget::item:selected { background: transparent; }
-            QLineEdit {
-                background-color: #FFFFFF;
-                color: #1E1B4B;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QPushButton#sendBtn {
-                background-color: #8B5CF6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton#sendBtn:hover { background-color: #7C3AED; }
-            QPushButton#emojiBtn {
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                font-size: 16px;
-            }
-            QPushButton#emojiBtn:hover { background-color: #2563EB; }
-            QPushButton#profileBtn {
-                background-color: #FFFFFF;
-                border: 1px solid #CBD5E1;
-                border-radius: 16px;
-                padding: 4px 10px;
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QPushButton#profileBtn:hover { background-color: #E2E8F0; }
-        """)
+        self.setStyleSheet(STYLE)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        
+
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(16, 14, 16, 16)
+        main_layout.setSpacing(10)
 
         # Header Bar
         top_bar = QHBoxLayout()
         app_title = QLabel("Local Chatroom")
-        app_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #8B5CF6;")
+        app_title.setStyleSheet("font-size: 20px; font-weight: bold;")
 
         self.profile_btn = QPushButton()
         self.profile_btn.setObjectName("profileBtn")
         self.profile_btn.setToolTip("Edit Profile")
+        self.profile_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.profile_btn.clicked.connect(self.open_profile_dialog)
         self.refresh_profile_header()
 
@@ -404,56 +459,68 @@ class Main_Chatroom(QMainWindow):
         main_layout.addLayout(top_bar)
 
         content_layout = QHBoxLayout()
+        content_layout.setSpacing(16)
 
         # Chats / Users
         self.user_chats = QVBoxLayout()
+        self.user_chats.setContentsMargins(0, 0, 0, 0)
         self.chats_display = QLabel("Chats")
-        self.chats_display.setStyleSheet("font-weight: bold; font-size: 15px;")
+        self.chats_display.setStyleSheet("font-size: 20px; margin-left: 8px;")
         self.user_chats.addWidget(self.chats_display)
 
         self.contacts = QListWidget()
         self.contacts.setObjectName("contactsWidget")
         self.contacts.itemClicked.connect(self.select_contacts)
+        make_transparent(self.contacts)
         self.user_chats.addWidget(self.contacts)
 
         contacts_list = QWidget()
         contacts_list.setLayout(self.user_chats)
-        contacts_list.setMaximumWidth(200)
+        contacts_list.setMaximumWidth(210)
         content_layout.addWidget(contacts_list)
 
-        # Main Chat System
-        chat_area = QVBoxLayout()
+        # Main Chat System (rounded taupe panel holding messages + input row)
+        chat_panel = QFrame()
+        chat_panel.setObjectName("chatPanel")
+        chat_area = QVBoxLayout(chat_panel)
+        chat_area.setContentsMargins(18, 18, 18, 16)
+        chat_area.setSpacing(10)
 
         self.chat_display = QListWidget()
         self.chat_display.setObjectName("chatWidget")
         self.chat_display.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        make_transparent(self.chat_display)
         chat_area.addWidget(self.chat_display)
 
         send_text = QHBoxLayout()
-        
+        send_text.setSpacing(8)
+
         self.text_input = QLineEdit()
         self.text_input.setPlaceholderText("Type a message (max 300 characters)...")
         self.text_input.setMaxLength(300)
         self.text_input.returnPressed.connect(self.send_message)
         send_text.addWidget(self.text_input)
 
-        self.emojiButton = QPushButton("😊")
+        self.emojiButton = QPushButton()
         self.emojiButton.setObjectName("emojiBtn")
-        self.emojiButton.setFixedWidth(30)
-        self.emojiButton.setFixedHeight(30)
+        self.emojiButton.setIcon(QIcon(svg_to_pixmap(ICON_SMILEY, 24)))
+        self.emojiButton.setIconSize(QSize(22, 22))
+        self.emojiButton.setFixedSize(52, 38)
+        self.emojiButton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.emojiButton.setToolTip("Insert emoji")
         self.emojiButton.clicked.connect(self.open_emoji_picker)
         send_text.addWidget(self.emojiButton)
 
         self.sendButton = QPushButton("Send")
         self.sendButton.setObjectName("sendBtn")
+        self.sendButton.setFixedHeight(38)
+        self.sendButton.setCursor(Qt.CursorShape.PointingHandCursor)
         self.sendButton.clicked.connect(self.send_message)
         send_text.addWidget(self.sendButton)
 
         chat_area.addLayout(send_text)
 
-        chat_area_display = QWidget()
-        chat_area_display.setLayout(chat_area)
-        content_layout.addWidget(chat_area_display)
+        content_layout.addWidget(chat_panel, 1)
 
         main_layout.addLayout(content_layout)
         self.show()
@@ -467,11 +534,10 @@ class Main_Chatroom(QMainWindow):
         pix = get_circular_pixmap(self.user_avatar, size=24)
         if pix:
             self.profile_btn.setIcon(QIcon(pix))
-            self.profile_btn.setIconSize(QtCore.QSize(24, 24))
-            self.profile_btn.setText(f" {self.username}")
         else:
-            self.profile_btn.setIcon(QIcon())
-            self.profile_btn.setText(f"👤 {self.username}")
+            self.profile_btn.setIcon(QIcon(svg_to_pixmap(ICON_USER, 24)))
+        self.profile_btn.setIconSize(QSize(24, 24))
+        self.profile_btn.setText(f"  {self.username}")
 
         self.setWindowTitle(f"Chatroom - Logged in as: {self.username}")
 
@@ -529,14 +595,14 @@ class Main_Chatroom(QMainWindow):
 
         if not message:
             return
-        
+
         if self.receiver_id is None:
             QMessageBox.warning(self, "No Recipient", "Please Select a contact first.")
             return
 
         save_message(self.user_id, self.receiver_id, message)
         self.text_input.clear()
-        
+
         if self.contacts.currentItem():
             self.select_contacts(self.contacts.currentItem())
 
@@ -545,7 +611,20 @@ class Main_Chatroom(QMainWindow):
         self.menu.show()
         self.close()
 
+
 if __name__ == '__main__':
+    # Optional (Windows): makes the taskbar show your icon instead of Python's
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("local.chatroom.app.1")
+    except Exception:
+        pass
+
     app = QApplication(sys.argv)
+    app.setWindowIcon(make_app_icon())
     ex = Main_Chatroom(user_id=1, username='TestUser')
+
+    # Uncomment once to export the icon as a PNG (e.g. for PyInstaller / converting to .ico):
+    # svg_to_pixmap(APP_ICON_SVG, 256).save("chat_icon.png")
+
     sys.exit(app.exec())
