@@ -9,6 +9,8 @@ This GitHub repository contains the source codes and files used in the developme
 
 Project: **QtChat - Simple Chat Application (username, chat threading w/ email)**
 
+<img width="384" height="384" alt="logo" src="https://github.com/user-attachments/assets/e271224b-7be9-4917-b634-829765b57bf6" />
+
 ## 🚹 Members
 
 * THOMAS JOSEPH ASTUDILLO
