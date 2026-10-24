@@ -9,6 +9,9 @@ This GitHub repository contains the source codes and files used in the developme
 
 Project: **DChat - Simple Chat Application (username, chat threading w/ email)**
 
+<img width="375" height="172" alt="image" src="https://github.com/user-attachments/assets/cc634882-6b98-43f5-b501-47cb731f11f4" />
+
+
 ## 🚹 Members
 
 * THOMAS JOSEPH ASTUDILLO
@@ -25,10 +28,12 @@ Project: **DChat - Simple Chat Application (username, chat threading w/ email)**
 
 ## 🖼️ Screenshot
 
-<img width="346" height="476" alt="image" src="https://github.com/user-attachments/assets/2d45fe4a-4bbb-4d1b-8835-9f1c66ad03dd" />
+<img width="551" height="426" alt="image" src="https://github.com/user-attachments/assets/615920b1-c934-46f3-a6c6-953927008a71" />
 
-<img width="743" height="475" alt="image" src="https://github.com/user-attachments/assets/13053ed1-c63c-4880-93c9-3ac3503636fd" />
+<img width="555" height="449" alt="image" src="https://github.com/user-attachments/assets/68f9a4c9-7534-4fee-a48d-27df18c98b7f" />
 
-<img width="223" height="213" alt="image" src="https://github.com/user-attachments/assets/57eeca5c-f173-4a67-846d-b8f2ec5a6dce" />
+<img width="797" height="538" alt="image" src="https://github.com/user-attachments/assets/34ba9b24-50f1-4497-b126-6eb15d56d92d" />
 
-<img width="318" height="342" alt="image" src="https://github.com/user-attachments/assets/10ecff93-5a9b-4280-b158-c029f23f3420" />
+<img width="224" height="210" alt="image" src="https://github.com/user-attachments/assets/c5f3915b-ae03-471b-96fa-5ce2803bf507" />
+
+<img width="318" height="388" alt="image" src="https://github.com/user-attachments/assets/d73a5434-a9c6-410c-b3f9-162e45d6aba3" />
