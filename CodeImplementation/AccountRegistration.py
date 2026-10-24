@@ -1,551 +1,222 @@
 import sys
-import os
-from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
-                             QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QDialog, QFileDialog)
-from PyQt6.QtGui import QPixmap, QPainter, QPainterPath, QIcon
+from PyQt6.QtCore import Qt, QByteArray, QSize
+from PyQt6.QtWidgets import (QApplication, QWidget, QGridLayout, QHBoxLayout,
+                             QLabel, QLineEdit, QPushButton, QMessageBox)
+from PyQt6.QtGui import QPixmap, QPainter, QIcon
+from PyQt6.QtSvg import QSvgRenderer
 
-from database import (save_message, get_all_users, get_messages, 
-                      update_user_avatar, update_username, get_user_by_id)
+from database import create_user
 
-from MenuInterface import App
-# Helper function to crop and render smooth circular pixmaps for avatars
-def get_circular_pixmap(image_path, size=28):
-    if image_path and os.path.exists(image_path):
-        src_pixmap = QPixmap(image_path)
-        if not src_pixmap.isNull():
-            scaled = src_pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-            out_pixmap = QPixmap(size, size)
-            out_pixmap.fill(Qt.GlobalColor.transparent)
+BG_COLOR = "#F5F5DC"
+INK_COLOR = "#000000"
+BTN_COLOR = "#57534B"
+BTN_HOVER = "#3F3C36"
+BTN_TEXT = "#F5F5DC"
 
-            painter = QPainter(out_pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            path = QPainterPath()
-            path.addEllipse(0, 0, size, size)
-            painter.setClipPath(path)
-            painter.drawPixmap(0, 0, scaled)
-            painter.end()
-            return out_pixmap
-    return None
+def _svg(body, color=INK_COLOR):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+            f'fill="{color}" stroke="none">{body}</svg>')
 
-# Profile Edit Dialog
-class ProfileDialog(QDialog):
-    def __init__(self, user_id, current_username, current_avatar, parent=None):
-        super().__init__(parent)
-        self.user_id = user_id
-        self.current_username = current_username
-        self.current_avatar = current_avatar
-        self.new_avatar_path = current_avatar
+ICON_USER = _svg('<circle cx="12" cy="7.5" r="5"/><path d="M2.5 22c0-5.5 4.2-8.5 9.5-8.5s9.5 3 9.5 8.5z"/>')
 
-        self.setWindowTitle("Edit Profile")
-        self.setFixedSize(320, 320)
+ICON_EMAIL = _svg(
+    '<g fill="none" stroke="#000" stroke-width="1.8" stroke-linejoin="round">'
+    '<rect x="2.5" y="4.5" width="19" height="15" rx="2"/>'
+    '<path d="M3 5.5l9 7.5 9-7.5M3 19l6.5-7M21 19l-6.5-7"/></g>')
+
+ICON_PHONE = _svg(
+    '<path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 '
+    '1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 '
+    '0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>')
+
+ICON_USERNAME = _svg(
+    '<g fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round">'
+    '<rect x="2.5" y="4" width="19" height="16" rx="3"/>'
+    '<circle cx="8.5" cy="10" r="2"/><path d="M5.5 16c.5-2 2-2.8 3-2.8s2.5.8 3 2.8"/>'
+    '<path d="M14.5 10h4M14.5 14h4"/></g>')
+
+ICON_LOCK = _svg(
+    '<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12'
+    'c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9'
+    'H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>')
+
+APP_ICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+    f'<rect width="64" height="64" rx="14" fill="{BTN_COLOR}"/>'
+    f'<g fill="{BG_COLOR}"><circle cx="26" cy="22" r="9"/>'
+    '<path d="M8 50c0-10 8-15 18-15s18 5 18 15z"/>'
+    f'<path d="M47 12h4v8h8v4h-8v8h-4v-8h-8v-4h8z" transform="translate(-6 -2)"/></g></svg>'
+)
+
+
+def svg_to_pixmap(svg_text, size):
+    renderer = QSvgRenderer(QByteArray(svg_text.encode("utf-8")))
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return pixmap
+
+
+def make_app_icon():
+    icon = QIcon()
+    for s in (16, 32, 48, 64, 128, 256):
+        icon.addPixmap(svg_to_pixmap(APP_ICON_SVG, s))
+    return icon
+
+
+class RegistrationApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.title = "Account Registration"
         self.initUI()
 
-    def initUI(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(12)
-
-        # Centered Avatar Preview
-        self.avatar_preview = QLabel()
-        self.avatar_preview.setFixedSize(64, 64)
-        self.avatar_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.update_avatar_preview(self.current_avatar)
-
-        avatar_container = QHBoxLayout()
-        avatar_container.addStretch()
-        avatar_container.addWidget(self.avatar_preview)
-        avatar_container.addStretch()
-        layout.addLayout(avatar_container)
-        layout.addSpacing(25)
-
-        # Change Avatar Button
-        change_avatar_btn = QPushButton("Change Avatar")
-        change_avatar_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 14px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover { background-color: #2563EB; }
-        """)
-        change_avatar_btn.clicked.connect(self.select_new_avatar)
-        
-        btn_container = QHBoxLayout()
-        btn_container.addStretch()
-        btn_container.addWidget(change_avatar_btn)
-        btn_container.addStretch()
-        layout.addLayout(btn_container)
-
-        # Username Input
-        user_label = QLabel("Username")
-        user_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #1E1B4B; margin-top: 4px;")
-        layout.addWidget(user_label)
-
-        self.username_input = QLineEdit(self.current_username)
-        self.username_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 8px 10px;
-                font-size: 13px;
-                color: #1E1B4B;
-            }
-        """)
-        layout.addWidget(self.username_input)
-
-        layout.addStretch()
-
-        # Save Button
-        save_btn = QPushButton("Save Changes")
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #8B5CF6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 9px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton:hover { background-color: #7C3AED; }
-        """)
-        save_btn.clicked.connect(self.save_profile)
-        layout.addWidget(save_btn)
-
-        # Logout Button
-        logout_btn = QPushButton("Log Out")
-        logout_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #8B5CF6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 9px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton:hover { background-color: #7C3AED; }
-        """)
-        logout_btn.clicked.connect(self.logout)
-        layout.addWidget(logout_btn)
-
-    def update_avatar_preview(self, path):
-        pix = get_circular_pixmap(path, size=64)
-        if pix:
-            self.avatar_preview.setPixmap(pix)
-            self.avatar_preview.setStyleSheet("border: none; background: transparent;")
-        else:
-            initial = self.current_username[0].upper() if self.current_username else "U"
-            self.avatar_preview.setText(initial)
-            self.avatar_preview.setStyleSheet("""
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border-radius: 32px;
-                font-size: 24px;
-                font-weight: bold;
-            """)
-
-    def select_new_avatar(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Select Avatar Image", "", "Image Files (*.png *.jpg *.jpeg *.bmp)"
-        )
-        if file_path:
-            self.new_avatar_path = file_path
-            self.update_avatar_preview(file_path)
-
-    def save_profile(self):
-        new_name = self.username_input.text().strip()
-        if not new_name:
-            QMessageBox.warning(self, "Error", "Username cannot be empty.")
-            return
-
-        if new_name != self.current_username:
-            success, msg = update_username(self.user_id, new_name)
-            if not success:
-                QMessageBox.warning(self, "Error", msg)
-                return
-
-        if self.new_avatar_path != self.current_avatar:
-            update_user_avatar(self.user_id, self.new_avatar_path)
-
-        QMessageBox.information(self, "Success", "Profile updated successfully!")
-        self.accept()
-
-    def logout(self):
-        reply = QMessageBox.warning(self,"Log Out","Are you sure you want to log out?",QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,)
-        if reply == QMessageBox.StandardButton.Yes:
-            self.close()
-            self.parent().logout()
-        else:
-            self.close
-
-# Popup Emoji Selector Widget
-class EmojiPicker(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Select Emoji")
-        self.setFixedSize(220, 180)
-        self.selected_emoji = ""
-
-        grid = QGridLayout()
-        emojis = [
-            '😊', '😂', '👍', '❤️', '🎉',
-            '🔥', '😎', '🙏', '😭', '✨',
-            '👋', '🤔', '💯', '🚀', '🥳'
-        ]
-
-        positions = [(i, j) for i in range(3) for j in range(5)]
-        for pos, emoji in zip(positions, emojis):
-            btn = QPushButton(emoji)
-            btn.setFixedSize(36, 36)
-            btn.setStyleSheet("font-size: 16px; border: 1px solid #CBD5E1; border-radius: 6px; background: #FFFFFF; color: #1E1B4B;")
-            btn.clicked.connect(lambda _, e=emoji: self.pick_emoji(e))
-            grid.addWidget(btn, *pos)
-
-        self.setLayout(grid)
-
-    def pick_emoji(self, emoji):
-        self.selected_emoji = emoji
-        self.accept()
-
-
-# Custom Widget for Contacts Sidebar List with Avatar
-class ContactItemWidget(QWidget):
-    def __init__(self, username, avatar_path):
-        super().__init__()
-        
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(10)
-
-        avatar_label = QLabel()
-        avatar_label.setFixedSize(28, 28)
-        avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        circular_pix = get_circular_pixmap(avatar_path, size=28)
-        if circular_pix:
-            avatar_label.setPixmap(circular_pix)
-        else:
-            initial = username[0].upper() if username else "U"
-            avatar_label.setText(initial)
-            avatar_label.setStyleSheet("""
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border-radius: 14px;
-                font-size: 12px;
-                font-weight: bold;
-            """)
-
-        name_label = QLabel(username)
-        name_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #1E1B4B; background: transparent;")
-
-        layout.addWidget(avatar_label)
-        layout.addWidget(name_label)
-        layout.addStretch()
-
-
-# Custom Widget for Message Bubbles (hehe Tried to do it like old messenger)
-class MessageBubble(QWidget):
-    def __init__(self, message, timestamp, is_self):
-        super().__init__()
-
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(8, 4, 8, 4)
-        main_layout.setSpacing(2)
-
-        container = QWidget()
-        box_layout = QVBoxLayout(container)
-        box_layout.setContentsMargins(12, 8, 12, 8)
-
-        msg_label = QLabel(message)
-        msg_label.setWordWrap(True)
-
-        time_label = QLabel(timestamp)
-        time_label.setStyleSheet("font-size: 9px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: #64748B; margin-top: 1px;")
-
-        bubble_row = QHBoxLayout()
-
-        if is_self:
-            container.setStyleSheet("QWidget { background-color: #8B5CF6; border-radius: 4px; }")
-            msg_label.setStyleSheet("font-size: 13px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: #FFFFFF;")
-            box_layout.addWidget(msg_label)
-
-            bubble_row.addStretch()
-            bubble_row.addWidget(container)
-
-            main_layout.addLayout(bubble_row)
-            main_layout.addWidget(time_label, alignment=Qt.AlignmentFlag.AlignRight)
-        else:
-            container.setStyleSheet("QWidget { background-color: #E2E8F0; border-radius: 4px; }")
-            msg_label.setStyleSheet("font-size: 13px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: #1E1B4B;")
-            box_layout.addWidget(msg_label)
-
-            bubble_row.addWidget(container)
-            bubble_row.addStretch()
-
-            main_layout.addLayout(bubble_row)
-            main_layout.addWidget(time_label, alignment=Qt.AlignmentFlag.AlignLeft)
-
-
-class Main_Chatroom(QMainWindow):
-    def __init__(self, user_id, username='Guest'):
-        super().__init__()
-        self.username = username
-        self.user_id = user_id
-        self.receiver_id = None
-        self.user_avatar = ""
-        
-        user_info = get_user_by_id(self.user_id)
-        if user_info:
-            self.username = user_info[1]
-            self.user_avatar = user_info[2] or ""
-
-        self.title = f"Local Chatroom - Logged in as: {self.username}"
-        self.x = 200
-        self.y = 200
-        self.width = 750
-        self.height = 450
-        self.initUI()
-        self.load_contacts()
-
-    # Purple / Blue / Cyan Theme Color Palette
     def initUI(self):
         self.setWindowTitle(self.title)
-        self.setGeometry(self.x, self.y, self.width, self.height)
+        self.setWindowIcon(make_app_icon())
+        self.setGeometry(200, 200, 560, 420)
+        self.setMinimumSize(480, 380)
 
-        self.setStyleSheet("""
-            QMainWindow, QWidget {
-                background-color: #F8FAFC;
-                color: #1E1B4B;
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {BG_COLOR};
+                color: {INK_COLOR};
                 font-family: 'Segoe UI', sans-serif;
-            }
-            QLabel { color: #1E1B4B; }
-            QListWidget#contactsWidget {
-                background-color: #FFFFFF;
-                color: #1E1B4B;
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
+            }}
+            QLabel {{ font-size: 16px; background: transparent; }}
+            QLineEdit {{
+                background-color: transparent;
+                color: {INK_COLOR};
+                border: 2px solid {INK_COLOR};
+                border-radius: 19px;
+                padding: 0 14px;
                 font-size: 14px;
-                padding: 5px;
-            }
-            QListWidget#contactsWidget::item { border-radius: 6px; margin-bottom: 2px; }
-            QListWidget#contactsWidget::item:selected { background-color: #E2E8F0; }
-            QListWidget#chatWidget {
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
-                background-color: #FFFFFF;
-            }
-            QListWidget#chatWidget::item { border: none; background: transparent; }
-            QListWidget#chatWidget::item:selected { background: transparent; }
-            QLineEdit {
-                background-color: #FFFFFF;
-                color: #1E1B4B;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 8px 12px;
+                min-width: 220px;
+                min-height: 36px;
+            }}
+            QLineEdit:focus {{ background-color: #FFFFFF; }}
+            QPushButton {{
+                background-color: {BTN_COLOR};
+                color: {BTN_TEXT};
+                border: 2px solid {INK_COLOR};
+                border-radius: 19px;
+                min-height: 36px;
                 font-size: 13px;
-            }
-            QPushButton#sendBtn {
-                background-color: #8B5CF6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton#sendBtn:hover { background-color: #7C3AED; }
-            QPushButton#emojiBtn {
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 6px;
-                font-size: 16px;
-            }
-            QPushButton#emojiBtn:hover { background-color: #2563EB; }
-            QPushButton#profileBtn {
-                background-color: #FFFFFF;
-                border: 1px solid #CBD5E1;
-                border-radius: 16px;
-                padding: 4px 10px;
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QPushButton#profileBtn:hover { background-color: #E2E8F0; }
+            }}
+            QPushButton:hover {{ background-color: {BTN_HOVER}; }}
+            QPushButton:pressed {{ background-color: {INK_COLOR}; }}
         """)
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        main_layout = QVBoxLayout(central_widget)
-
-        # Header Bar
-        top_bar = QHBoxLayout()
-        app_title = QLabel("Local Chatroom")
-        app_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #8B5CF6;")
-
-        self.profile_btn = QPushButton()
-        self.profile_btn.setObjectName("profileBtn")
-        self.profile_btn.setToolTip("Edit Profile")
-        self.profile_btn.clicked.connect(self.open_profile_dialog)
-        self.refresh_profile_header()
-
-        top_bar.addWidget(app_title)
-        top_bar.addStretch()
-        top_bar.addWidget(self.profile_btn)
-
-        main_layout.addLayout(top_bar)
-
-        content_layout = QHBoxLayout()
-
-        # Chats / Users
-        self.user_chats = QVBoxLayout()
-        self.chats_display = QLabel("Chats")
-        self.chats_display.setStyleSheet("font-weight: bold; font-size: 15px;")
-        self.user_chats.addWidget(self.chats_display)
-
-        self.contacts = QListWidget()
-        self.contacts.setObjectName("contactsWidget")
-        self.contacts.itemClicked.connect(self.select_contacts)
-        self.user_chats.addWidget(self.contacts)
-
-        contacts_list = QWidget()
-        contacts_list.setLayout(self.user_chats)
-        contacts_list.setMaximumWidth(200)
-        content_layout.addWidget(contacts_list)
-
-        # Main Chat System
-        chat_area = QVBoxLayout()
-
-        self.chat_display = QListWidget()
-        self.chat_display.setObjectName("chatWidget")
-        self.chat_display.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        chat_area.addWidget(self.chat_display)
-
-        send_text = QHBoxLayout()
-        
-        self.text_input = QLineEdit()
-        self.text_input.setPlaceholderText("Type a message (max 300 characters)...")
-        self.text_input.setMaxLength(300)
-        self.text_input.returnPressed.connect(self.send_message)
-        send_text.addWidget(self.text_input)
-
-        self.emojiButton = QPushButton("😊")
-        self.emojiButton.setObjectName("emojiBtn")
-        self.emojiButton.setFixedWidth(30)
-        self.emojiButton.setFixedHeight(30)
-        self.emojiButton.clicked.connect(self.open_emoji_picker)
-        send_text.addWidget(self.emojiButton)
-
-        self.sendButton = QPushButton("Send")
-        self.sendButton.setObjectName("sendBtn")
-        self.sendButton.clicked.connect(self.send_message)
-        send_text.addWidget(self.sendButton)
-
-        chat_area.addLayout(send_text)
-
-        chat_area_display = QWidget()
-        chat_area_display.setLayout(chat_area)
-        content_layout.addWidget(chat_area_display)
-
-        main_layout.addLayout(content_layout)
+        self.createGridLayout()
+        self.setLayout(self.layout)
         self.show()
 
-    def refresh_profile_header(self):
-        user_info = get_user_by_id(self.user_id)
-        if user_info:
-            self.username = user_info[1]
-            self.user_avatar = user_info[2] or ""
+    def make_label(self, text, svg):
+        """Text label followed by an icon, like in the mockup."""
+        container = QWidget(self)
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
 
-        pix = get_circular_pixmap(self.user_avatar, size=24)
-        if pix:
-            self.profile_btn.setIcon(QIcon(pix))
-            self.profile_btn.setIconSize(QtCore.QSize(24, 24))
-            self.profile_btn.setText(f" {self.username}")
+        text_lbl = QLabel(text, container)
+        icon_lbl = QLabel(container)
+        icon_lbl.setPixmap(svg_to_pixmap(svg, 24))
+        icon_lbl.setFixedSize(QSize(24, 24))
+
+        row.addWidget(text_lbl)
+        row.addWidget(icon_lbl)
+        row.addStretch()
+        return container
+
+    def createGridLayout(self):
+        self.layout = QGridLayout()
+        self.layout.setContentsMargins(24, 24, 24, 24)
+        self.layout.setVerticalSpacing(14)
+        self.layout.setColumnStretch(0, 1)
+        self.layout.setColumnStretch(1, 1)
+
+        # Input widgets
+        self.first_name = QLineEdit(self)
+        self.last_name = QLineEdit(self)
+        self.email = QLineEdit(self)
+        self.contact = QLineEdit(self)
+        self.textbox = QLineEdit(self)
+        self.password = QLineEdit(self)
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.button = QPushButton("Register", self)
+        self.button.setToolTip("Click to register your account")
+        self.button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.button.clicked.connect(self.register_account)
+
+        rows = [
+            ("First Name:", ICON_USER, self.first_name),
+            ("Last Name:", ICON_USER, self.last_name),
+            ("Email:", ICON_EMAIL, self.email),
+            ("Contact Number:", ICON_PHONE, self.contact),
+            ("Username:", ICON_USERNAME, self.textbox),
+            ("Password:", ICON_LOCK, self.password),
+        ]
+        for i, (text, svg, field) in enumerate(rows):
+            self.layout.addWidget(self.make_label(text, svg), i, 0)
+            self.layout.addWidget(field, i, 1)
+
+        self.layout.setRowMinimumHeight(len(rows), 10)
+        self.layout.addWidget(self.button, len(rows) + 1, 1)
+
+    def register_account(self):
+        first_name = self.first_name.text().strip()
+        last_name = self.last_name.text().strip()
+        email = self.email.text().strip()
+        contact = self.contact.text().strip()
+        username = self.textbox.text().strip()
+        password = self.password.text().strip()
+
+        # Check for empty fields
+        if not all([first_name, last_name, email, contact, username, password]):
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Registration Error")
+            msg_box.setText("Please fill in all fields before registering.")
+            msg_box.exec()
+            return
+
+        # Save the account to the database
+        success, msg = create_user(username, password)
+
+        if success:
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            msg_box.setWindowTitle("Registration Successful")
+            msg_box.setText(f"Account for '{username}' registered successfully!")
+            msg_box.exec()
+
+            # Clear inputs
+            self.first_name.clear()
+            self.last_name.clear()
+            self.email.clear()
+            self.contact.clear()
+            self.textbox.clear()
+            self.password.clear()
+            self.close()
         else:
-            self.profile_btn.setIcon(QIcon())
-            self.profile_btn.setText(f"👤 {self.username}")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
+            msg_box.setWindowTitle("Registration Error")
+            msg_box.setText(msg)
+            msg_box.exec()
 
-        self.setWindowTitle(f"Chatroom - Logged in as: {self.username}")
-
-    def open_profile_dialog(self):
-        dialog = ProfileDialog(self.user_id, self.username, self.user_avatar, self)
-        if dialog.exec():
-            self.refresh_profile_header()
-            self.load_contacts()
-
-    def open_emoji_picker(self):
-        picker = EmojiPicker(self)
-        if picker.exec() and picker.selected_emoji:
-            self.text_input.setText(self.text_input.text() + picker.selected_emoji)
-            self.text_input.setFocus()
-
-    def load_contacts(self):
-        self.contacts.clear()
-
-        for user_data in get_all_users():
-            user_id = user_data[0]
-            username = user_data[1]
-            avatar_path = user_data[2] if len(user_data) > 2 else ""
-
-            if int(user_id) == self.user_id:
-                continue
-
-            contact_widget = ContactItemWidget(username, avatar_path)
-            item = QListWidgetItem(self.contacts)
-            item.setData(Qt.ItemDataRole.UserRole, int(user_id))
-            item.setText("")  # Clears underlying default text rendering behind custom widget
-            item.setSizeHint(contact_widget.sizeHint())
-
-            self.contacts.addItem(item)
-            self.contacts.setItemWidget(item, contact_widget)
-
-    def select_contacts(self, item):
-        self.receiver_id = int(item.data(Qt.ItemDataRole.UserRole))
-        self.chat_display.clear()
-
-        for msg in get_messages(self.user_id, self.receiver_id):
-            message_id, sender_id, receiver_id, message, timestamp = msg
-            is_self = (int(sender_id) == self.user_id)
-
-            bubble_widget = MessageBubble(message, timestamp, is_self)
-            list_item = QListWidgetItem(self.chat_display)
-            list_item.setSizeHint(bubble_widget.sizeHint())
-
-            self.chat_display.addItem(list_item)
-            self.chat_display.setItemWidget(list_item, bubble_widget)
-
-        self.chat_display.scrollToBottom()
-
-    def send_message(self):
-        message = self.text_input.text().strip()
-
-        if not message:
-            return
-        
-        if self.receiver_id is None:
-            QMessageBox.warning(self, "No Recipient", "Please Select a contact first.")
-            return
-
-        save_message(self.user_id, self.receiver_id, message)
-        self.text_input.clear()
-        
-        if self.contacts.currentItem():
-            self.select_contacts(self.contacts.currentItem())
-
-    def logout(self):
-        self.menu = App()
-        self.menu.show()
-        self.close()
 
 if __name__ == '__main__':
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("registration.app.1")
+    except Exception:
+        pass
+
     app = QApplication(sys.argv)
-    ex = Main_Chatroom(user_id=1, username='TestUser')
+    app.setWindowIcon(make_app_icon())
+    ex = RegistrationApp()
+
     sys.exit(app.exec())
