@@ -182,6 +182,15 @@ class RegistrationApp(QWidget):
             msg_box.exec()
             return
 
+        # Check for minimum 8 characters in password
+        if len(password) < 8:
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Registration Error")
+            msg_box.setText("Password must be at least 8 characters long.")
+            msg_box.exec()
+            return
+
         # Save the account to the database
         success, msg = create_user(username, password)
 

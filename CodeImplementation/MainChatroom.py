@@ -408,7 +408,9 @@ class MessageBubble(QWidget):
 
         msg_label = QLabel(message)
         msg_label.setWordWrap(True)
-
+        # Restricts message width for wrapping
+        msg_label.setMaximumWidth(400)
+        
         time_label = QLabel(timestamp)
         time_label.setStyleSheet(f"font-size: 9px; font-family: 'Segoe UI', sans-serif; background: transparent; border: none; color: {MUTED_TEXT}; margin-top: 1px;")
 
