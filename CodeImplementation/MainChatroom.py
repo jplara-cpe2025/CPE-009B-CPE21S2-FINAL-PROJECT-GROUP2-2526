@@ -8,8 +8,8 @@ from PyQt6.QtGui import QPixmap, QPainter, QPainterPath, QIcon
 from PyQt6.QtSvg import QSvgRenderer
 
 from database import (save_message, get_all_users, get_messages,
-                      update_user_avatar, update_username, get_user_by_id)
-
+                      update_user_avatar, update_username, get_user_by_id,
+                      get_user)
 from MenuInterface import App
 
 # ---------------------------------------------------------------- Palette
@@ -214,6 +214,15 @@ class ProfileDialog(QDialog):
         self.username_input = QLineEdit(self.current_username)
         layout.addWidget(self.username_input)
 
+        password_label = QLabel("Current Password")
+        password_label.setStyleSheet("font-size: 13px; font-weight: bold;")
+        layout.addWidget(password_label)
+
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Enter current password")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addWidget(self.password_input)
+
         layout.addStretch()
 
         # Save Button
@@ -257,9 +266,43 @@ class ProfileDialog(QDialog):
 
     def save_profile(self):
         new_name = self.username_input.text().strip()
+
         if not new_name:
             QMessageBox.warning(self, "Error", "Username cannot be empty.")
             return
+
+        if new_name != self.current_username:
+            password = self.password_input.text()
+
+            if not password:
+                QMessageBox.warning(
+                    self, "Password Required",
+                    "Please enter your current password to change your username."
+                )
+                return
+
+            user = get_user(self.current_username, password)
+
+            if not user:
+                QMessageBox.warning(
+                    self, "Incorrect Password",
+                    "The password you entered is incorrect."
+                )
+                return
+
+            success, msg = update_username(self.user_id, new_name)
+
+            if not success:
+                QMessageBox.warning(self, "Error", msg)
+                return
+
+        if self.new_avatar_path != self.current_avatar:
+            update_user_avatar(self.user_id, self.new_avatar_path)
+
+        QMessageBox.information(
+            self, "Success", "Profile updated successfully!"
+        )
+        self.accept()
 
         if new_name != self.current_username:
             success, msg = update_username(self.user_id, new_name)
@@ -484,7 +527,12 @@ class Main_Chatroom(QMainWindow):
         self.text_input.setPlaceholderText("Type a message (max 300 characters)...")
         self.text_input.setMaxLength(300)
         self.text_input.returnPressed.connect(self.send_message)
+        self.text_input.textChanged.connect(self.update_character_count)
         send_text.addWidget(self.text_input)
+
+        self.char_count = QLabel("0/300")
+        self.char_count.setStyleSheet("font-size: 11px; color: #57534B;")
+        send_text.addWidget(self.char_count)
 
         self.emojiButton = QPushButton()
         self.emojiButton.setObjectName("emojiBtn")
@@ -574,6 +622,9 @@ class Main_Chatroom(QMainWindow):
             self.chat_display.setItemWidget(list_item, bubble_widget)
 
         self.chat_display.scrollToBottom()
+
+    def update_character_count(self, text):
+        self.char_count.setText(f"{len(text)}/300")
 
     def send_message(self):
         message = self.text_input.text().strip()
